@@ -151,8 +151,8 @@ public final class HttpResponseCache extends ResponseCache
 
     private final libcore.net.http.HttpResponseCache delegate;
 
-    private HttpResponseCache(File directory, long maxSize) throws IOException {
-        this.delegate = new libcore.net.http.HttpResponseCache(directory, maxSize);
+    private HttpResponseCache(File directory, long maxSize, boolean sharedCache) throws IOException {
+        this.delegate = new libcore.net.http.HttpResponseCache(directory, maxSize, sharedCache);
     }
 
     /***
@@ -176,20 +176,36 @@ public final class HttpResponseCache extends ResponseCache
      *     warning.
      */
     public static HttpResponseCache install(File directory, long maxSize) throws IOException {
+       return install(directory, maxSize, true);
+    }
+
+    /***
+     * Creates a new HTTP response cache and {@link ResponseCache#setDefault
+     * sets it} as the system default cache.
+     *
+     * @param directory the directory to hold cache data.
+     * @param maxSize the maximum size of the cache in bytes.
+     * @return the newly-installed cache
+     * @throws IOException if {@code directory} cannot be used for this cache.
+     *     Most applications should respond to this exception by logging a
+     *     warning.
+     */
+    public static HttpResponseCache install(File directory, long maxSize, boolean sharedCache) throws IOException {
         HttpResponseCache installed = getInstalled();
         if (installed != null) {
             // don't close and reopen if an equivalent cache is already installed
             DiskLruCache installedCache = installed.delegate.getCache();
             if (installedCache.getDirectory().equals(directory)
                     && installedCache.getMaxSize() == maxSize
-                    && !installedCache.isClosed()) {
+                    && !installedCache.isClosed()
+                    && installed.isSharedCache() == sharedCache) {
                 return installed;
             } else {
                 IoUtils.closeQuietly(installed);
             }
         }
 
-        HttpResponseCache result = new HttpResponseCache(directory, maxSize);
+        HttpResponseCache result = new HttpResponseCache(directory, maxSize, sharedCache);
         ResponseCache.setDefault(result);
         HttpsURLConnection.setDefaultHostnameVerifier(new DefaultHostnameVerifier());
         if(!calledSetURLStreamHandlerFactory) {
@@ -225,6 +241,10 @@ public final class HttpResponseCache extends ResponseCache
      */
     public long maxSize() {
         return delegate.getCache().getMaxSize();
+    }
+
+    public boolean isSharedCache() {
+        return delegate.isSharedCache();
     }
 
     /***

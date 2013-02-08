@@ -79,8 +79,16 @@ public final class HttpResponseCache extends ResponseCache implements ExtendedRe
     private int hitCount;
     private int requestCount;
 
+    // should this cache behave as a shared or non-shared cache
+    private boolean sharedCache;
+
     public HttpResponseCache(File directory, long maxSize) throws IOException {
+        this(directory, maxSize, true);
+    }
+
+    public HttpResponseCache(File directory, long maxSize, boolean sharedCache) throws IOException {
         cache = DiskLruCache.open(directory, VERSION, ENTRY_COUNT, maxSize);
+        this.sharedCache = sharedCache;
     }
 
     private String uriToKey(URI uri) {
@@ -230,6 +238,10 @@ public final class HttpResponseCache extends ResponseCache implements ExtendedRe
 
     public DiskLruCache getCache() {
         return cache;
+    }
+
+    public boolean isSharedCache(){
+        return sharedCache;
     }
 
     public synchronized int getWriteAbortCount() {

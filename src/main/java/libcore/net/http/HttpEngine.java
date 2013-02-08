@@ -136,6 +136,12 @@ public class HttpEngine {
     private CacheResponse cacheResponse;
     private CacheRequest cacheRequest;
 
+    /**
+     * Is our ResponseCache configured as a shared or non-shared cache? Defaults to a shared cache (the implementation
+     * available in android startin 4.0 is shared)
+     */
+    private boolean sharedCache = true;
+
     /** The time when the request headers were written, or -1 if they haven't been written yet. */
     private long sentRequestMillis = -1;
 
@@ -202,6 +208,12 @@ public class HttpEngine {
         }
 
         this.requestHeaders = new RequestHeaders(uri, new RawHeaders(requestHeaders));
+
+        if (responseCache instanceof com.integralblue.httpresponsecache.HttpResponseCache){
+            sharedCache = ((com.integralblue.httpresponsecache.HttpResponseCache)responseCache).isSharedCache();
+        } else {
+            sharedCache = true;
+        }
     }
 
     public URI getUri() {
@@ -276,7 +288,7 @@ public class HttpEngine {
         RawHeaders rawResponseHeaders = RawHeaders.fromMultimap(responseHeadersMap);
         cachedResponseHeaders = new ResponseHeaders(uri, rawResponseHeaders);
         long now = System.currentTimeMillis();
-        this.responseSource = cachedResponseHeaders.chooseResponseSource(now, requestHeaders);
+        this.responseSource = cachedResponseHeaders.chooseResponseSource(now, requestHeaders, sharedCache);
         if (responseSource == ResponseSource.CACHE) {
             this.cacheResponse = candidate;
             setResponse(cachedResponseHeaders, cachedResponseBody);
@@ -452,7 +464,7 @@ public class HttpEngine {
         }
 
         // Should we cache this response for this request?
-        if (!responseHeaders.isCacheable(requestHeaders)) {
+        if (!responseHeaders.isCacheable(requestHeaders, sharedCache)) {
             return;
         }
 

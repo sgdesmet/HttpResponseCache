@@ -322,7 +322,7 @@ public final class ResponseHeaders {
      * Returns true if this response can be stored to later serve another
      * request.
      */
-    public boolean isCacheable(RequestHeaders request) {
+    public boolean isCacheable(RequestHeaders request, boolean sharedCache) {
         /*
          * Always go to network for uncacheable response codes (RFC 2616, 13.4),
          * This implementation doesn't support caching partial content.
@@ -338,12 +338,14 @@ public final class ResponseHeaders {
 
         /*
          * Responses to authorized requests aren't cacheable unless they include
-         * a 'public', 'must-revalidate' or 's-maxage' directive.
+         * a 'public', 'must-revalidate' or 's-maxage' directive, or the cache is
+         * non-shared
          */
         if (request.hasAuthorization()
                 && !isPublic
                 && !mustRevalidate
-                && sMaxAgeSeconds == -1) {
+                && sMaxAgeSeconds == -1
+                && sharedCache) {
             return false;
         }
 
@@ -379,13 +381,13 @@ public final class ResponseHeaders {
     /**
      * Returns the source to satisfy {@code request} given this cached response.
      */
-    public ResponseSource chooseResponseSource(long nowMillis, RequestHeaders request) {
+    public ResponseSource chooseResponseSource(long nowMillis, RequestHeaders request, boolean sharedCache) {
         /*
          * If this response shouldn't have been stored, it should never be used
          * as a response source. This check should be redundant as long as the
          * persistence store is well-behaved and the rules are constant.
          */
-        if (!isCacheable(request)) {
+        if (!isCacheable(request, sharedCache)) {
             return ResponseSource.NETWORK;
         }
 
