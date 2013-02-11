@@ -166,7 +166,8 @@ public final class HttpResponseCache extends ResponseCache
 
     /***
      * Creates a new HTTP response cache and {@link ResponseCache#setDefault
-     * sets it} as the system default cache.
+     * sets it} as the system default cache. This is a shared cache, thus
+     * mimicking the behaviour of the default android implementation.
      *
      * @param directory the directory to hold cache data.
      * @param maxSize the maximum size of the cache in bytes.
@@ -183,8 +184,16 @@ public final class HttpResponseCache extends ResponseCache
      * Creates a new HTTP response cache and {@link ResponseCache#setDefault
      * sets it} as the system default cache.
      *
+     * Caches can be shared or non-shared (the default is shared). Note that
+     * a shared cache does not imply that the cache can be used be other applications,
+     * but instead controls what will and will not be cached. Shared caches do not
+     * cache requests for which an Authorization header was set, will non-shared
+     * caches do. It is up to the developer to use http cache directives to ensure
+     * that no sensitive data is cached.
+     *
      * @param directory the directory to hold cache data.
      * @param maxSize the maximum size of the cache in bytes.
+     * @param sharedCache is the cache shared or non-shared
      * @return the newly-installed cache
      * @throws IOException if {@code directory} cannot be used for this cache.
      *     Most applications should respond to this exception by logging a
